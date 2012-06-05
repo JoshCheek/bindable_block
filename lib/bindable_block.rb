@@ -8,6 +8,10 @@ class BindableBlock
       new(args, instance_method).call
     end
 
+    def call
+      result
+    end
+
     private
 
     attr_reader :args, :parameters, :result
@@ -41,10 +45,6 @@ class BindableBlock
 
     def has_rest?
       @has_splat
-    end
-
-    def call
-      result
     end
   end
 
