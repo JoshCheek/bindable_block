@@ -12,6 +12,7 @@ greeter.bind(User.new "Josh").call # => "Welcome, Josh"
 <% end %>
 ```
 
+[Here](https://github.com/JoshCheek/surrogate/blob/eb1d7f98a148c032f6d3ef1d8df8b703386f286d/lib/surrogate/options.rb#L32-34) is an example.
 
 ## Installation
 
