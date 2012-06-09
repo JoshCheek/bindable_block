@@ -4,8 +4,11 @@ class BindableBlock
 
   # match args to arity, since instance_method has lambda properties
   class ArgAligner
-    def self.align(args, instance_method)
-      new(args, instance_method).call
+    def initialize(args, instance_method)
+      @result, @args, @parameters = [], args, instance_method.parameters.map(&:first)
+      take num :req
+      take [num(:opt), args.size].min
+      take args.size if has? :rest
     end
 
     def call
@@ -16,35 +19,16 @@ class BindableBlock
 
     attr_reader :args, :parameters, :result
 
-    def initialize(args, instance_method)
-      @result, @args, @parameters = [], args, instance_method.parameters.map(&:first)
-      track_if_has_rest
-      parameters.delete :rest
-      remove_block
-      take num_required
-      parameters.delete :req
-      take 1 while parameters.shift && args.any?
-      take args.size if has_rest?
+    def has?(type)
+      parameters.any? { |param| param == type }
     end
 
-    def num_required
-      parameters.count { |param| param == :req }
+    def num(type)
+      parameters.count { |param| param == type }
     end
 
     def take(n)
       n.times { result << args.shift }
-    end
-
-    def remove_block
-      parameters.pop if parameters.last == :block
-    end
-
-    def track_if_has_rest
-      @has_splat = parameters.any? { |param| param == :rest }
-    end
-
-    def has_rest?
-      @has_splat
     end
   end
 
@@ -76,7 +60,7 @@ class BindableBlock
   private
 
   def align(args)
-    ArgAligner.align args, instance_method
+    ArgAligner.new(args, instance_method).call
   end
 
   def method_name
