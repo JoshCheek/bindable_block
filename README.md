@@ -12,6 +12,45 @@ greeter.bind(User.new "Josh").call # => "Welcome, Josh"
 
 [Here](https://github.com/JoshCheek/surrogate/blob/eb1d7f98a148c032f6d3ef1d8df8b703386f286d/lib/surrogate/options.rb#L32-34) is an example.
 
+## Where the abstraction leaks
+
+Bindable block does something that isn't possible in Ruby.
+It does this with black magick. Unfortunately, that abstraction
+will leak in the case of return statements. Return statements in
+blocks will return you from the containing method.
+
+```ruby
+def meth
+  Proc.new { return 1 }.call
+  2
+end
+
+meth # => 1
+```
+
+
+Return statements in lambdas will return you from the lambda.
+
+```ruby
+def meth
+  lambda { return 1 }.call
+  2
+end
+
+meth # => 2
+```
+
+You would expect a bindable block to continue to behave like the
+former example, but it will actually behave like the latter example.
+
+At present, I can only think of two ways to fix this:
+
+1) It might be possible to rewrite the AST with ripper.
+2) It is probably possible to write this in C.
+
+Neither of these are high on my priority list.
+
+
 ## Installation
 
 Add this line to your application's Gemfile:
