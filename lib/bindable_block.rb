@@ -59,10 +59,6 @@ class BindableBlock < Proc
     @original_block.arity
   end
 
-  def lambda?
-    false # not strictly necessary, I just want to be explicit
-  end
-
   def curry(arity=nil)
     arity ||= @instance_method.parameters.count { |type, _| type == :req }
     original_block     = @original_block # can't use the imeth, because it's unbound, so no curry

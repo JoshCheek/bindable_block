@@ -13,15 +13,25 @@ class BindableBlock < Proc
     end
 
     def lambda?
-      false
+      original_block.lambda?
     end
 
     def bound_location
       [bound_file.dup, bound_line_number]
     end
 
+    def parameters
+      original_block.parameters
+    end
+
+    def inspect
+      original_block.to_s.gsub(/^#<\w*/, "#<#{self.class.name}")
+    end
+    alias to_s inspect
+
+
     def binding
-      raise <<-SADFACE.gsub(/^\s*/, '')
+      raise NotImplementedError, <<-SADFACE.gsub(/^\s*/, '')
         I legit tried to figure this out, and can't :(
 
         * Can't just ask, it's private on most objects

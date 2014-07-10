@@ -1,9 +1,9 @@
 require 'bindable_block'
 
-# TODO: lambda style depends on what was passed in?
-# should it be retained?
+# TODO: when created with a lambda, args should match like lambda args
 
 describe BindableBlock do
+  let(:name)         { 'Unbound Name' }
   let(:default_name) { "Carmen" }
   let(:klass)        { Struct.new :name }
   let(:instance)     { klass.new default_name }
@@ -60,9 +60,9 @@ describe BindableBlock do
 
   describe 'as a block' do
     it 'can be passed in the block slot to methods and shit' do
-      doubler = lambda { |&block| block.call + block.call }
-      assert_equal 24,             doubler.call(&BindableBlock.new { 12 })
-      assert_equal 'CarmenCarmen', doubler.call(&BindableBlock.new { name }.bind(instance))
+      doubler = lambda { |&block| block.call + '!' }
+      assert_equal 'Unbound Name!', doubler.call(&BindableBlock.new { name })
+      assert_equal 'Carmen!',       doubler.call(&BindableBlock.new { name }.bind(instance))
     end
 
     it 'can be invoked without being bound, in which case self is that of the scope it was defined in' do
@@ -81,16 +81,6 @@ describe BindableBlock do
       assert_equal default_name, m(&block)
     end
 
-    it 'is not a lambda style proc' do
-      refute BindableBlock.new {}.lambda?
-      refute BindableBlock.new {}.bind(instance).lambda?
-    end
-
-
-    def proxy_pending
-      pending 'Need a proxy object in the middle?'
-    end
-
     it 'has a #bound_location to complement #source_location' do
       unbound = BindableBlock.new { }
       bound   = unbound.bind(instance)
@@ -105,7 +95,6 @@ describe BindableBlock do
     end
 
     context 'Proc instance methods' do
-      let(:name)          { 'Unbound Name' }
       let(:args_and_name) { BindableBlock.new { |arg| [arg, name] } }
 
       example '#[]' do
@@ -128,6 +117,11 @@ describe BindableBlock do
         b = BindableBlock.new(&p)
         assert_equal p.arity, b.arity
         assert_equal p.arity, b.bind(instance).arity
+
+        l = Proc.new { |a, b, c=1, d=2, *e, f| [a,b,c,d,e,f] }
+        b = BindableBlock.new(&l)
+        assert_equal l.arity, b.arity
+        assert_equal l.arity, b.bind(instance).arity
       end
 
       example '#binding' do
@@ -151,7 +145,6 @@ describe BindableBlock do
         assert_equal [1, 'Unbound Name'], args_and_name.dup.call(1)
         assert_equal [1, 'Carmen'],       args_and_name.bind(instance).dup.call(1)
       end
-
 
       example '#curry without being bound' do
         b    = BindableBlock.new { |a, b, c, &d| [a, b, c, d.call, name] }
@@ -182,11 +175,22 @@ describe BindableBlock do
         raise pending 'punting on this, b/c I really don\'t know what it should do here'
       end
 
+      example '#lambda?' do
+        refute BindableBlock.new {}.lambda?
+        refute BindableBlock.new {}.bind(instance).lambda?
+
+        assert BindableBlock.new(&lambda {}).lambda?
+        assert BindableBlock.new(&lambda {}).bind(instance).lambda?
+      end
+
       example '#parameters' do
-        b = BindableBlock.new { |a, b, c=1, d=2, *e, f| }
-        assert_equal [[:opt, :a], [:opt, :b], [:opt, :c], [:opt, :d], [:rest, :e], [:opt, :f]], b.parameters
-        proxy_pending
-        assert_equal [[:opt, :a], [:opt, :b], [:opt, :c], [:opt, :d], [:rest, :e], [:opt, :f]], b.bind(instance).parameters
+        b = BindableBlock.new { |a, b=1, *c, d, e:, **f, &g| }
+        assert_equal [[:opt, :a], [:opt, :b], [:rest, :c], [:opt, :d], [:keyreq, :e], [:keyrest, :f], [:block, :g]], b.parameters
+        assert_equal [[:opt, :a], [:opt, :b], [:rest, :c], [:opt, :d], [:keyreq, :e], [:keyrest, :f], [:block, :g]], b.bind(instance).parameters
+
+        b = BindableBlock.new(&lambda { |a, b=1, *c, d, e:, **f, &g| })
+        assert_equal [[:req, :a], [:opt, :b], [:rest, :c], [:req, :d], [:keyreq, :e], [:keyrest, :f], [:block, :g]], b.parameters
+        assert_equal [[:req, :a], [:opt, :b], [:rest, :c], [:req, :d], [:keyreq, :e], [:keyrest, :f], [:block, :g]], b.bind(instance).parameters
       end
 
       example '#source_location' do
@@ -203,13 +207,44 @@ describe BindableBlock do
         assert_same bound, bound.to_proc
       end
 
-      example '#to_s' do
+      example '#to_s and #inspect have the source file and line' do
+        # proc
         unbound, f, l = BindableBlock.new {}, __FILE__, __LINE__
         expect(unbound.to_s).to include "#{f}:#{l}"
+        expect(unbound.to_s).to include "BindableBlock"
 
-        proxy_pending
         bound = unbound.bind(instance)
         expect(bound.to_s).to include "#{f}:#{l}"
+        expect(bound.to_s).to include "BindableBlock::BoundBlock"
+
+        # lambda
+        unbound, f, l = BindableBlock.new(&lambda {}), __FILE__, __LINE__
+        expect(unbound.to_s).to include "#{f}:#{l}"
+        expect(unbound.to_s).to include "BindableBlock"
+
+        bound = unbound.bind(instance)
+        expect(bound.to_s).to include "#{f}:#{l}"
+        expect(bound.to_s).to include "BindableBlock::BoundBlock"
+      end
+
+      specify '#to_s and #inspect should not have lambda in them' do
+        # proc
+        unbound = BindableBlock.new {}
+        expect(unbound.to_s).to_not include 'lambda'
+        expect(unbound.inspect).to_not include 'lambda'
+
+        bound = unbound.bind instance
+        expect(bound.to_s).to_not include 'lambda'
+        expect(bound.inspect).to_not include 'lambda'
+
+        # lambda
+        unbound = BindableBlock.new(&lambda {})
+        expect(unbound.to_s).to include 'lambda'
+        expect(unbound.inspect).to include 'lambda'
+
+        bound = unbound.bind instance
+        expect(bound.to_s).to include 'lambda'
+        expect(bound.inspect).to include 'lambda'
       end
     end
   end
