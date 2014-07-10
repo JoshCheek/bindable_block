@@ -23,7 +23,7 @@ BUT! If I still can't convince you, then read on:
 require 'bindable_block'
 
 User = Struct.new :name
-greeter = BindableBlock.new(User) { "Welcome, #{name}" }
+greeter = BindableBlock.new { "Welcome, #{name}" }
 greeter.bind(User.new "Josh").call # => "Welcome, Josh"
 ```
 
@@ -44,6 +44,7 @@ sum # => 114
 ```
 
 [Here](https://github.com/JoshCheek/surrogate/blob/eb1d7f98a148c032f6d3ef1d8df8b703386f286d/lib/surrogate/options.rb#L32-34) is an example.
+Note that it is the old-style where users had to submit the class that could be bound to.
 
 ## Possible advances in usefulness
 
