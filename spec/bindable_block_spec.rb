@@ -1,5 +1,8 @@
 require 'bindable_block'
 
+# TODO: lambda style depends on what was passed in?
+# should it be retained?
+
 describe BindableBlock do
   let(:default_name) { "Carmen" }
   let(:klass)        { Struct.new :name }
@@ -91,8 +94,14 @@ describe BindableBlock do
     it 'has a #bound_location to complement #source_location' do
       unbound = BindableBlock.new { }
       bound   = unbound.bind(instance)
-      proxy_pending
-      assert_equal bound.bound_location, [__FILE__, __LINE__.pred]
+      assert_equal bound.bound_location, [__FILE__, __LINE__-1]
+    end
+
+    specify '#bound_location isn\'t susceptible to mutation of returned value' do
+      bound = BindableBlock.new { }.bind(instance)
+      bound.bound_location.first.replace ""  # mutate the string
+      bound.bound_location.replace []        # mutate the array
+      assert_equal bound.bound_location, [__FILE__, __LINE__-3]
     end
 
     context 'Proc instance methods' do
@@ -118,7 +127,6 @@ describe BindableBlock do
         p = Proc.new { |a, b, c=1, d=2, *e, f| [a,b,c,d,e,f] }
         b = BindableBlock.new(&p)
         assert_equal p.arity, b.arity
-        proxy_pending
         assert_equal p.arity, b.bind(instance).arity
       end
 
@@ -129,7 +137,7 @@ describe BindableBlock do
         assert_equal 1,        b.binding.eval('a')
         assert_equal self,     b.binding.eval('self')
 
-        proxy_pending
+        pending "If anyone can solve this, I'll be so impressed"
         assert_equal 1,        b.bind(instance).binding.eval('a')
         assert_equal instance, b.bind(instance).binding.eval('self')
       end
@@ -144,17 +152,30 @@ describe BindableBlock do
         assert_equal [1, 'Carmen'],       args_and_name.bind(instance).dup.call(1)
       end
 
-      example '#curry' do
-        b = BindableBlock.new { |a, b, c| [a, b, c, name] }
-        assert_equal [1, 2, 3, 'Unbound Name'], b.curry[1][2][3]
-        assert_equal [1, 2, 3, 'Unbound Name'], b.curry[1, 2][3]
 
-        proxy_pending
-        assert_equal [1, 2, 3, 'Unbound Name'], b.bind(instance).curry[1][2][3]
-        assert_equal [1, 2, 3, 'Unbound Name'], b.bind(instance).curry[1, 2][3]
-        assert_equal [1, 2, 3, 'Unbound Name'], b.curry[1].bind(instance).curry[2][3]
-        assert_equal [1, 2, 3, 'Unbound Name'], b.curry[1, 2].bind(instance).curry[3]
-        assert_equal [1, 2, 3, 'Unbound Name'], b.curry[1][2].bind(instance).curry[3]
+      example '#curry without being bound' do
+        b    = BindableBlock.new { |a, b, c, &d| [a, b, c, d.call, name] }
+        four = lambda { 4 }
+
+        assert_equal [1, 2, 3, 4, 'Unbound Name'], b.curry[1, 2, 3, &four]
+        assert_equal [1, 2, 3, 4, 'Unbound Name'], b.curry[1][2][3, &four]
+        assert_equal [1, 2, 3, 4, 'Unbound Name'], b.curry[1, 2][3, &four]
+      end
+
+      example '#curry after being bound' do
+        b    = BindableBlock.new { |a, b, c, &d| [a, b, c, d.call, name] }.bind(instance)
+        four = lambda { 4 }
+        assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1][2][3, &four]
+        assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1, 2][3, &four]
+      end
+
+      example '#curry before being bound' do
+        b = BindableBlock.new { |a, b, c, &d| [a, b, c, d.call, name] }
+        four = lambda { 4 }
+        assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1].bind(instance).curry[2][3, &four]
+        assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1, 2].bind(instance).curry[3, &four]
+        assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1][2].bind(instance).curry[3, &four]
+        assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1][2].bind(instance).curry[3, &four]
       end
 
       example '#hash' do
@@ -171,7 +192,6 @@ describe BindableBlock do
       example '#source_location' do
         b, f, l = BindableBlock.new { }, __FILE__, __LINE__
         assert_equal [f, l], b.source_location
-        proxy_pending
         assert_equal [f, l], b.bind(instance).source_location
       end
 
