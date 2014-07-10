@@ -1,3 +1,5 @@
+require 'bindable_block'
+
 class BasicObject
   def instance_exec_b(*args, argument_block, &instance_block)
     if argument_block.nil?
