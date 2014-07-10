@@ -53,6 +53,14 @@ class BindableBlock < Proc
     original_block.call(*args, &block)
   end
 
+  def arity
+    original_block.arity
+  end
+
+  def lambda?
+    false # not strictly necessary, I just want to be explicit
+  end
+
   private
 
   def align(args)

@@ -77,6 +77,121 @@ describe BindableBlock do
       end
       assert_equal default_name, m(&block)
     end
+
+    it 'is not a lambda style proc' do
+      refute BindableBlock.new {}.lambda?
+      refute BindableBlock.new {}.bind(instance).lambda?
+    end
+
+
+    def proxy_pending
+      pending 'Need a proxy object in the middle?'
+    end
+
+    it 'has a #bound_location to complement #source_location' do
+      unbound = BindableBlock.new { }
+      bound   = unbound.bind(instance)
+      proxy_pending
+      assert_equal bound.bound_location, [__FILE__, __LINE__.pred]
+    end
+
+    context 'Proc instance methods' do
+      let(:name)          { 'Unbound Name' }
+      let(:args_and_name) { BindableBlock.new { |arg| [arg, name] } }
+
+      example '#[]' do
+        assert_equal [1, 'Unbound Name'], args_and_name[1]
+        assert_equal [1, 'Carmen'],       args_and_name.bind(instance)[1]
+      end
+
+      example '#===' do
+        assert_equal [1, 'Unbound Name'], args_and_name === 1
+        assert_equal [1, 'Carmen'],       args_and_name.bind(instance) === 1
+      end
+
+      example '#yield' do
+        assert_equal [1, 'Unbound Name'], args_and_name.yield(1)
+        assert_equal [1, 'Carmen'],       args_and_name.bind(instance).yield(1)
+      end
+
+      example '#arity' do
+        p = Proc.new { |a, b, c=1, d=2, *e, f| [a,b,c,d,e,f] }
+        b = BindableBlock.new(&p)
+        assert_equal p.arity, b.arity
+        proxy_pending
+        assert_equal p.arity, b.bind(instance).arity
+      end
+
+      example '#binding' do
+        a = 1
+        b = BindableBlock.new { }
+
+        assert_equal 1,        b.binding.eval('a')
+        assert_equal self,     b.binding.eval('self')
+
+        proxy_pending
+        assert_equal 1,        b.bind(instance).binding.eval('a')
+        assert_equal instance, b.bind(instance).binding.eval('self')
+      end
+
+      example '#clone' do
+        assert_equal [1, 'Unbound Name'], args_and_name.clone.call(1)
+        assert_equal [1, 'Carmen'],       args_and_name.bind(instance).clone.call(1)
+      end
+
+      example '#dup' do
+        assert_equal [1, 'Unbound Name'], args_and_name.dup.call(1)
+        assert_equal [1, 'Carmen'],       args_and_name.bind(instance).dup.call(1)
+      end
+
+      example '#curry' do
+        b = BindableBlock.new { |a, b, c| [a, b, c, name] }
+        assert_equal [1, 2, 3, 'Unbound Name'], b.curry[1][2][3]
+        assert_equal [1, 2, 3, 'Unbound Name'], b.curry[1, 2][3]
+
+        proxy_pending
+        assert_equal [1, 2, 3, 'Unbound Name'], b.bind(instance).curry[1][2][3]
+        assert_equal [1, 2, 3, 'Unbound Name'], b.bind(instance).curry[1, 2][3]
+        assert_equal [1, 2, 3, 'Unbound Name'], b.curry[1].bind(instance).curry[2][3]
+        assert_equal [1, 2, 3, 'Unbound Name'], b.curry[1, 2].bind(instance).curry[3]
+        assert_equal [1, 2, 3, 'Unbound Name'], b.curry[1][2].bind(instance).curry[3]
+      end
+
+      example '#hash' do
+        raise pending 'punting on this, b/c I really don\'t know what it should do here'
+      end
+
+      example '#parameters' do
+        b = BindableBlock.new { |a, b, c=1, d=2, *e, f| }
+        assert_equal [[:opt, :a], [:opt, :b], [:opt, :c], [:opt, :d], [:rest, :e], [:opt, :f]], b.parameters
+        proxy_pending
+        assert_equal [[:opt, :a], [:opt, :b], [:opt, :c], [:opt, :d], [:rest, :e], [:opt, :f]], b.bind(instance).parameters
+      end
+
+      example '#source_location' do
+        b, f, l = BindableBlock.new { }, __FILE__, __LINE__
+        assert_equal [f, l], b.source_location
+        proxy_pending
+        assert_equal [f, l], b.bind(instance).source_location
+      end
+
+      example '#to_proc' do
+        unbound = BindableBlock.new {}
+        assert_same unbound, unbound.to_proc
+
+        bound = unbound.bind(instance)
+        assert_same bound, bound.to_proc
+      end
+
+      example '#to_s' do
+        unbound, f, l = BindableBlock.new {}, __FILE__, __LINE__
+        expect(unbound.to_s).to include "#{f}:#{l}"
+
+        proxy_pending
+        bound = unbound.bind(instance)
+        expect(bound.to_s).to include "#{f}:#{l}"
+      end
+    end
   end
 
 
