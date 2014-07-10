@@ -51,7 +51,11 @@ class BindableBlock < Proc
     attr_accessor :bound_file, :bound_line_number, :original_block, :method
 
     def align(args)
-      ArgAligner.new(args, method).call
+      if original_block.lambda?
+        args
+      else
+        ArgAligner.new(args, method).call
+      end
     end
   end
 end

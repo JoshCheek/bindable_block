@@ -251,6 +251,40 @@ describe BindableBlock do
 
 
   describe 'arguments' do
+    def assert_same_error(b1, b2)
+      e1 = b1.call rescue $!
+      e2 = b2.call rescue $!
+      expect(e1).to be_an Exception
+      expect(e2).to be_an Exception
+      assert_equal e1.class,   e2.class
+      assert_equal e1.message, e2.message
+    end
+
+    it 'matches them lambda-style if initialized with a lambda' do
+      l     = lambda { |a| a }
+      block = BindableBlock.new(&l)
+      assert_equal 1, block.call(1)
+      assert_equal 1, block.bind(instance).call(1)
+      assert_same_error lambda { block.call                     }, lambda { l.call      }
+      assert_same_error lambda { block.call 1, 2                }, lambda { l.call 1, 2 }
+      assert_same_error lambda { block.bind(instance).call      }, lambda { l.call      }
+      assert_same_error lambda { block.bind(instance).call 1, 2 }, lambda { l.call 1, 2 }
+    end
+
+    it 'matches them proc-style if initialized with a proc' do
+      p     = Proc.new { |a| a }
+      block = BindableBlock.new(&p)
+      assert_equal 1,            block.call(1)
+      assert_equal p.call,       block.call
+      assert_equal p.call(1),    block.call(1)
+      assert_equal p.call(1, 2), block.call(1, 2)
+
+      assert_equal 1,            block.bind(instance).call(1)
+      assert_equal p.call,       block.bind(instance).call
+      assert_equal p.call(1),    block.bind(instance).call(1)
+      assert_equal p.call(1, 2), block.bind(instance).call(1, 2)
+    end
+
     it 'can take a block' do
       block = BindableBlock.new { |a, &b| [a, (b&&b.call)] }.bind(instance)
       assert_equal [1, nil], block.call(1)
