@@ -1,6 +1,23 @@
 # BindableBlock
 
-`instance_exec` can't take block arguments. Get around that with BindableProc
+`instance_exec` can't take block arguments. Get around that with BindableBlock.
+
+If you understand that previous statement, then I probably can't dissuade you from using this.
+If you don't, then a word of warning: This is probably the wrong solution.
+`instance_exec` is probably the wrong solution too.
+Metaprogramming is almost never merited.
+It's lighting your way by setting yourself on fire.
+Your problem will be simpler if you don't use it.
+It will be more comprehensible.
+You'll waste less time later trying to figure out how to get it to do what you want.
+95% of the times I've used metaprogramming, I've later regretted it.
+The whole use-case that led to the creation of this gem was wrong,
+it was unnecessary, it added tremendous complexity to the implementation.
+Think Rails moving from `find_by_name(name)` to `find_by(name: name)`,
+and how much better that was.
+
+BUT! If I still can't convince you, then read on:
+
 
 ```ruby
 <% test 'example', with: :magic_comments do %>
