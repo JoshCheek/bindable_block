@@ -142,7 +142,7 @@ describe BindableBlock do
     end
   end
 
-  describe 'instance_exec_b', t:true do
+  describe 'instance_exec_b' do
     it 'is only available if you require the file explicitly, since it monkey patches BasicObject' do
       expect { method :instance_exec_b }.to raise_error NameError
       require 'bindable_block/instance_exec_b'
@@ -182,6 +182,17 @@ describe BindableBlock do
     it 'doesn\'t need ordinal args' do
       assert instance.instance_exec_b(lambda {}) { |&block| !!block }
       refute instance.instance_exec_b(nil)       { |&block| !!block }
+    end
+
+    it 'Doesn\'t define methods on the class' do
+      class BasicObject
+        old_method_added = singleton_class.method(:method_added)
+        def self.method_added(method_name)
+          raise "METHOD ADDED: #{method_name}"
+        end
+        instance_exec_b(lambda {}) { }
+        define_singleton_method(:method_added, &old_method_added)
+      end
     end
   end
 end

@@ -6,7 +6,7 @@ class BasicObject
       instance_exec(*args, &instance_block)
     elsif argument_block.respond_to?(:call) && argument_block.respond_to?(:to_proc)
       ::BindableBlock
-        .new(self.class, &instance_block)
+        .new(self.singleton_class, &instance_block)
         .bind(self)
         .call(*args, &argument_block)
     else
