@@ -1,6 +1,6 @@
 # BindableBlock
 
-`instance_exec` can't take block arguments. Get around that with BindableBlock.
+`instance_exec` can't take block arguments. Get around that with BindableProc (also provides optional `BasicObject#instance_exec_b`)
 
 If you understand that previous statement, then I probably can't dissuade you from using this.
 If you don't, then a word of warning: This is probably the wrong solution.
