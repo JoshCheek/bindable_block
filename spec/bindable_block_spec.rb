@@ -20,46 +20,83 @@ describe BindableBlock do
   end
 
 
-  it 'can be bound to instances of the target' do
-    block = BindableBlock.new(klass) { self }
-    assert_same block.bind(instance).call, instance
+  describe 'binding' do
+    it 'can be bound to any object' do
+      block = BindableBlock.new { self }
+      assert_same block.bind(instance).call, instance
+    end
+
+    it 'can be bound to a BasicObject' do
+      o = BasicObject.new
+      o.instance_eval { @a = 1 }
+      assert_equal 1, BindableBlock.new { @a }.bind(o).call
+    end
+
+    it 'can be rebound' do
+      block = BindableBlock.new { name }
+      assert_equal 'Josh', block.bind(klass.new 'Josh').call
+      assert_equal 'Mei',  block.bind(klass.new 'Mei').call
+    end
+
+    it 'can be rebound to instances of different classes' do
+      klass1 = Class.new { def m; 1; end }
+      klass2 = Class.new { def m; 2; end }
+      block  = BindableBlock.new { m }
+      assert_equal 1, block.bind(klass1.new).call
+      assert_equal 2, block.bind(klass2.new).call
+    end
+
+    it 'can scope the class of objects it can be bound to' do
+      klass1 = Class.new
+      klass2 = Class.new
+      block = BindableBlock.new(klass1) {}
+      block.bind(klass1.new).call
+      expect { block.bind(klass2.new).call }.to raise_error TypeError, /instance of/
+    end
   end
 
-  it 'can be rebound' do
-    block = BindableBlock.new(klass) { name }
-    assert_equal 'Josh', block.bind(klass.new 'Josh').call
-    assert_equal 'Mei',  block.bind(klass.new 'Mei').call
+  describe 'as a block' do
+    it 'can be passed in the block slot to methods and shit' do
+      doubler = lambda { |&block| block.call + block.call }
+      assert_equal 24,             doubler.call(&BindableBlock.new { 12 })
+      assert_equal 'CarmenCarmen', doubler.call(&BindableBlock.new { name }.bind(instance))
+    end
+
+    it 'can be invoked without being bound, in which case self is that of the scope it was defined in' do
+      def self.a() 1 end
+      @b = 2
+      c = 3
+      block = BindableBlock.new { |d, &e| a + @b + c + d + e.call }
+      assert_equal 15, block.call(4){5}
+    end
+
+    it 'retains it\'s bindability after being passed through a method' do
+      pending "Not sure I can get this to work"
+      block = BindableBlock.new { name }
+      def m(&bindable_block)
+        bindable_block.bind(instance).call
+      end
+      assert_equal default_name, m(&block)
+    end
   end
 
-  it 'can also just be invoked without being bound' do
-    def self.a() 1 end
-    b = 2
-    block = BindableBlock.new(klass) { |c, &d| a + b + c + d.call }
-    assert_equal 10, block.call(3){4}
-  end
-
-  it 'can be passed to methods and shit' do
-    doubler = lambda { |&block| block.call + block.call }
-    assert_equal 24,             doubler.call(&BindableBlock.new(klass) { 12 })
-    assert_equal 'CarmenCarmen', doubler.call(&BindableBlock.new(klass) { name }.bind(instance))
-  end
 
   describe 'arguments' do
     it 'can take a block' do
-      block = BindableBlock.new(klass) { |a, &b| [a, (b&&b.call)] }.bind(instance)
+      block = BindableBlock.new { |a, &b| [a, (b&&b.call)] }.bind(instance)
       assert_equal [1, nil], block.call(1)
       assert_equal [1, 2],   block.call(1){2}
     end
 
     specify "when given ordinal arguments at the start, it doesn't care about arity" do
-      block = BindableBlock.new(klass) { |a| [a] }.bind(instance)
+      block = BindableBlock.new { |a| [a] }.bind(instance)
       assert_equal [nil], block.call
       assert_equal [1],   block.call(1)
       assert_equal [1],   block.call(1, 2)
     end
 
     specify 'when given optional args, it matches them up correctly' do
-      block = BindableBlock.new(klass) { |a, b=1, c=2| [a, b, c] }.bind(instance)
+      block = BindableBlock.new { |a, b=1, c=2| [a, b, c] }.bind(instance)
       assert_equal [nil, 1, 2]  , block.call
       assert_equal [:a, 1, 2]   , block.call(:a)
       assert_equal [:a, :b, 2]  , block.call(:a, :b)
@@ -68,7 +105,7 @@ describe BindableBlock do
     end
 
     specify 'splat acts as a catch all' do
-      block = BindableBlock.new(klass) { |a, *rest| [a, rest] }.bind(instance)
+      block = BindableBlock.new { |a, *rest| [a, rest] }.bind(instance)
       assert_equal [nil, []]   , block.call
       assert_equal [1, []]     , block.call(1)
       assert_equal [1, [2]]    , block.call(1, 2)
@@ -76,13 +113,13 @@ describe BindableBlock do
     end
 
     specify "when given ordinal arguments at the end, it doesn't care about arity" do
-      block = BindableBlock.new(klass) { |*a, b, &c| [a, b] }.bind(instance)
+      block = BindableBlock.new { |*a, b, &c| [a, b] }.bind(instance)
       assert_equal [[], nil]   , block.call
       assert_equal [[], 1]     , block.call(1)
       assert_equal [[1], 2]    , block.call(1,2)
       assert_equal [[1, 2], 3] , block.call(1,2,3)
 
-      block = BindableBlock.new(klass) { |a=:a, b, c| [a, b, c] }.bind(instance)
+      block = BindableBlock.new { |a=:a, b, c| [a, b, c] }.bind(instance)
       assert_equal [:a, nil, nil] , block.call
       assert_equal [:a, 1, nil]   , block.call(1)
       assert_equal [:a, 1, 2]     , block.call(1, 2)
@@ -93,7 +130,7 @@ describe BindableBlock do
 
     specify "when given complex arguments, it matches that shit up right" do
       proc  = Proc.new { |a, b, c=1, d=2, *e, f| [a,b,c,d,e,f] }
-      block = BindableBlock.new(klass, &proc).bind(instance)
+      block = BindableBlock.new(&proc).bind(instance)
       assert_equal proc.call                       , block.call
       assert_equal proc.call(:a)                   , block.call(:a)
       assert_equal proc.call(:a,:b)                , block.call(:a,:b)

@@ -33,7 +33,7 @@ class BindableBlock
   end
 
 
-  def initialize(klass, &block)
+  def initialize(klass=BasicObject, &block)
     @original_block  = block
 
     klass.__send__ :define_method, method_name, &block
