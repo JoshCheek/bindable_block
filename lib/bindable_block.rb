@@ -36,9 +36,9 @@ class BindableBlock < Proc
   def initialize(klass=BasicObject, &block)
     @original_block  = block
 
-    klass.__send__ :define_method, method_name, &block
-    @instance_method = klass.instance_method method_name
-    klass.__send__ :remove_method, method_name
+    klass.__send__ :define_method, temp_method_name, &block
+    @instance_method = klass.instance_method temp_method_name
+    klass.__send__ :remove_method, temp_method_name
   end
 
   attr_reader :instance_method, :original_block
@@ -67,7 +67,7 @@ class BindableBlock < Proc
     ArgAligner.new(args, instance_method).call
   end
 
-  def method_name
-    @method_name ||= "bindable_block_#{Time.now.to_i}_#{$$}_#{rand 1000000}"
+  def temp_method_name
+    @method_name ||= "bindable_block_#{Time.now.to_i}_#{$$}_#{rand 1_000_0000}"
   end
 end
