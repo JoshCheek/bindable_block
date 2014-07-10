@@ -1,6 +1,6 @@
 require "bindable_block/version"
 
-class BindableBlock
+class BindableBlock < Proc
 
   # match args to arity, since instance_method has lambda properties
   class ArgAligner
@@ -51,10 +51,6 @@ class BindableBlock
 
   def call(*args, &block)
     original_block.call(*args, &block)
-  end
-
-  def to_proc
-    method(:call).to_proc
   end
 
   private

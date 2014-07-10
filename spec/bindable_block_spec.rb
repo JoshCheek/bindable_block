@@ -71,7 +71,6 @@ describe BindableBlock do
     end
 
     it 'retains it\'s bindability after being passed through a method' do
-      pending "Not sure I can get this to work"
       block = BindableBlock.new { name }
       def m(&bindable_block)
         bindable_block.bind(instance).call
