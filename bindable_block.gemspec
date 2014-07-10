@@ -15,4 +15,6 @@ Gem::Specification.new do |gem|
   gem.name          = "bindable_block"
   gem.require_paths = ["lib"]
   gem.version       = BindableBlock::VERSION
+
+  gem.add_development_dependency 'rspec', '>= 3.0.0', '~> 3.0'
 end
