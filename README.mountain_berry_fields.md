@@ -29,7 +29,31 @@ greeter.bind(User.new "Josh").call # => "Welcome, Josh"
 <% end %>
 ```
 
+```ruby
+<% test 'example', with :magic_comments do %>
+require 'bindable_block/instance_exec_b'
+
+# http://rdoc.info/stdlib/core/BasicObject:instance_exec
+class KlassWithSecret
+  def initialize
+    @secret = 99
+  end
+end
+k           = KlassWithSecret.new
+sum         = 10
+sum_updater = lambda { |to_add| sum += to_add }
+result      = k.instance_exec_b(5, sum_updater) { |x, &b| b.call(@secret+x) } # => 114
+sum # => 114
+<% end %>
+```
+
 [Here](https://github.com/JoshCheek/surrogate/blob/eb1d7f98a148c032f6d3ef1d8df8b703386f286d/lib/surrogate/options.rb#L32-34) is an example.
+
+## Possible advances in usefulness
+
+It just occurred to me that if we bound it to BasicObject
+then it could be used on any class without the user needing to
+specify which class they want to bind it to.
 
 ## Where the abstraction leaks
 
