@@ -12,6 +12,12 @@ describe BindableBlock do
   def assert_same(a, b)
     expect(b).to equal a
   end
+  def assert(val)
+    expect(val).to be_truthy
+  end
+  def refute(val)
+    expect(val).to_not be_truthy
+  end
 
 
   it 'can be bound to instances of the target' do
@@ -96,6 +102,49 @@ describe BindableBlock do
       assert_equal proc.call(:a,:b,:c,:d,:e)       , block.call(:a,:b,:c,:d,:e)
       assert_equal proc.call(:a,:b,:c,:d,:e,:f)    , block.call(:a,:b,:c,:d,:e,:f)
       assert_equal proc.call(:a,:b,:c,:d,:e,:f,:g) , block.call(:a,:b,:c,:d,:e,:f,:g)
+    end
+  end
+
+  describe 'instance_exec_b', t:true do
+    it 'is only available if you require the file explicitly, since it monkey patches BasicObject' do
+      expect { method :instance_exec_b }.to raise_error NameError
+      require 'bindable_block/instance_exec_b'
+      method :instance_exec_b
+    end
+
+    it 'is on wherever instance_exec is on (BasicObject)' do
+      expect(method(:instance_exec_b).owner).to equal method(:instance_exec).owner
+    end
+
+    it 'provides an instance_exec like method, whose last argument is a block' do
+      a, b = 1, 2
+      result = instance.instance_exec_b(a, lambda { b }) { |ordinal, &block| "#{name}#{ordinal}#{block.call}" }
+      assert_equal "Carmen12", result
+    end
+
+    it 'passes no block if the last param is nil'  do
+      a, b = 1, 2
+      result = instance.instance_exec_b(a, nil) { |ordinal, &block| "#{name}#{ordinal}#{!!block}" }
+      assert_equal "Carmen1false", result
+    end
+
+    it 'the block can be blocky things (can be called and put into the block slot), otherwise raises an ArgumentError' do
+      expect { instance.instance_exec_b(1) { |*| } }.to raise_error ArgumentError, /block/
+      expect { instance.instance_exec_b(1, :abc) { |*| } }.to raise_error ArgumentError, /block/ # has to_proc, but not call
+      o = Object.new
+      def o.call(*)
+        2
+      end
+      expect { instance.instance_exec_b(1, o) { |*| } }.to raise_error ArgumentError, /block/ # has call, but not to_proc
+      def o.to_proc
+        Proc.new { 3 }
+      end
+      assert_equal 4, instance.instance_exec_b(1, o) { |n, &b| n + b.call }
+    end
+
+    it 'doesn\'t need ordinal args' do
+      assert instance.instance_exec_b(lambda {}) { |&block| !!block }
+      refute instance.instance_exec_b(nil)       { |&block| !!block }
     end
   end
 end
