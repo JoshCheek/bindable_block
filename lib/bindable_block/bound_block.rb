@@ -1,3 +1,5 @@
+require 'bindable_block/arg_aligner'
+
 class BindableBlock < Proc
   class BoundBlock < Proc
     def initialize(original_block, &method)
@@ -43,23 +45,6 @@ class BindableBlock < Proc
         This is your friendly reminder that whatever you're using this method for is probably bullshit.
       SADFACE
     end
-
-    # def curry(arity=nil)
-    #   arity ||= method.parameters.count { |type, _| type == :req }
-
-    #   currier = Proc.new do |prev_args|
-    #     Proc.new do |*args, &block|
-    #       all_args = prev_args + args
-    #       if arity <= all_args.size
-    #         call(*all_args, &block)
-    #       else
-    #         currier all_args
-    #       end
-    #     end
-    #   end
-
-    #   currier.call []
-    # end
 
     private
 
