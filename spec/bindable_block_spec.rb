@@ -1,7 +1,5 @@
 require 'bindable_block'
 
-# TODO: when created with a lambda, args should match like lambda args
-
 describe BindableBlock do
   let(:name)         { 'Unbound Name' }
   let(:default_name) { "Carmen" }
