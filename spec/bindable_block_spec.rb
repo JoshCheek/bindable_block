@@ -10,6 +10,9 @@ describe BindableBlock do
   def assert_equal(a, b)
     expect(b).to eq a
   end
+  def refute_equal(a, b)
+    expect(b).to_not eq a
+  end
   def assert_same(a, b)
     expect(b).to equal a
   end
@@ -183,8 +186,44 @@ describe BindableBlock do
         assert_equal [1, 2, 3, 4, 'Carmen'], b.curry.bind(instance).===(1).(2, 3, &four)
       end
 
-      example '#hash' do
-        raise pending 'punting on this, b/c I really don\'t know what it should do here'
+      describe '#hash' do
+        context 'when unbound' do
+          it 'delegates the hash to its proc' do
+            p = Proc.new {}
+            assert_equal p.hash, BindableBlock.new(&p).hash
+          end
+          # something about curry?
+        end
+
+        context 'when bound' do
+          let(:p)       { lambda {} }
+          let(:unbound) { BindableBlock.new(&p) }
+
+          it 'is an integer' do
+            expect(unbound.bind(instance).hash).to be_a_kind_of Integer
+          end
+
+          it 'gives a different hash than the unbound version' do
+            refute_equal p.hash, unbound.bind(instance).hash
+          end
+
+          it 'gives the same hash when bound to an object with the same hash' do
+            o = Object.new
+            assert_equal unbound.bind(o).hash,
+                         unbound.bind(o).hash
+          end
+
+          it 'gives a different hash when bound to an object with a different hash' do
+            o1 = Object.new
+            o2 = Object.new
+            refute_equal unbound.bind(o1).hash, unbound.bind(o2).hash
+          end
+
+          it 'gives the same hash when bound to an object without a hash' do
+            assert_equal unbound.bind(BasicObject.new).hash,
+                         unbound.bind(BasicObject.new).hash
+          end
+        end
       end
 
       example '#lambda?' do

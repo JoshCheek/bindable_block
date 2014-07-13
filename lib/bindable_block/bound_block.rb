@@ -2,12 +2,13 @@ require 'bindable_block/arg_aligner'
 
 class BindableBlock < Proc
   class BoundBlock < Proc
-    def initialize(original_block, &method)
+    def initialize(original_block, target, &method)
       f, ln, *               = caller[2].split(':')
       self.bound_file        = f
       self.bound_line_number = ln.to_i
       self.original_block    = original_block
       self.method            = method
+      self.target            = target
     end
 
     def call(*args, &block)
@@ -31,6 +32,11 @@ class BindableBlock < Proc
     end
     alias to_s inspect
 
+    def hash
+      target_hash = target.hash rescue 0
+      target_hash ^ original_block.hash
+    end
+
 
     def binding
       raise NotImplementedError, <<-SADFACE.gsub(/^\s*/, '')
@@ -48,7 +54,7 @@ class BindableBlock < Proc
 
     private
 
-    attr_accessor :bound_file, :bound_line_number, :original_block, :method
+    attr_accessor :bound_file, :bound_line_number, :original_block, :method, :target
 
     def align(args)
       if original_block.lambda?

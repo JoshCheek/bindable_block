@@ -14,7 +14,7 @@ class BindableBlock < Proc
   end
 
   def bind(target)
-    bound = BoundBlock.new @original_block, &@instance_method.bind(target)
+    bound = BoundBlock.new @original_block, target, &@instance_method.bind(target)
     if @curried_args then bound.curry(@uncurried_size)[*@curried_args]
     else                  bound
     end
