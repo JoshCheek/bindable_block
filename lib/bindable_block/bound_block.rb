@@ -11,7 +11,7 @@ class BindableBlock < Proc
     end
 
     def call(*args, &block)
-      method.call(*align(args), &block)
+      method.call(*align(args), &block) # match args to arity, since instance_method has lambda properties
     end
 
     def lambda?

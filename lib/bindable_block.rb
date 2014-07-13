@@ -2,9 +2,6 @@ require "bindable_block/version"
 require 'bindable_block/bound_block'
 
 class BindableBlock < Proc
-
-  # match args to arity, since instance_method has lambda properties
-
   def initialize(klass=BasicObject, &block)
     @klass           = klass
     @original_block  = block
@@ -23,10 +20,6 @@ class BindableBlock < Proc
     end
   end
 
-  def call(*args, &block)
-    @original_block.call(*args, &block)
-  end
-
   def arity
     @original_block.arity
   end
@@ -38,24 +31,22 @@ class BindableBlock < Proc
     klass              = @klass
 
     proc_maker = lambda do |curried_args, uncurried_size|
-      p = Proc.new do |*args, &block|
+      curried = Proc.new do |*args, &block|
         actual_args = curried_args + args
         if uncurried_size <= actual_args.size
           original_block.call(*actual_args, &block)
         else
-          curried = proc_maker.call actual_args, uncurried_size
-          bindable_blk_class.new klass, &curried
+          proc_maker.call actual_args, uncurried_size
         end
       end
-      p.instance_variable_set :@curried_values, {
+      curried.instance_variable_set :@curried_values, {
         original_block: original_block,
         curried_args:   curried_args,
         uncurried_size: arity,
       }
-      p
+      bindable_blk_class.new klass, &curried
     end
-    curried = proc_maker.call [], arity
-    BindableBlock.new klass, &curried
+    proc_maker.call [], arity
   end
 
   private

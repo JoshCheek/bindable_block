@@ -35,7 +35,7 @@ describe BindableBlock do
       assert_equal 1, BindableBlock.new { @a }.bind(o).call
     end
 
-    it 'can be rebound' do
+    it 'can be bound to multiple different objects' do
       block = BindableBlock.new { name }
       assert_equal 'Josh', block.bind(klass.new 'Josh').call
       assert_equal 'Mei',  block.bind(klass.new 'Mei').call
@@ -169,6 +169,20 @@ describe BindableBlock do
         assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1, 2].bind(instance).curry[3, &four]
         assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1][2].bind(instance).curry[3, &four]
         assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1][2].bind(instance).curry[3, &four]
+
+        assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1].bind(instance)[2][3, &four]
+        assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1, 2].bind(instance)[3, &four]
+        assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1][2].bind(instance)[3, &four]
+        assert_equal [1, 2, 3, 4, 'Carmen'], b.curry[1][2].bind(instance)[3, &four]
+      end
+
+      example 'other #curry bullshit' do
+        b = BindableBlock.new { |a, b, c, &d| [a,b,c,d.call, name] }
+        four = lambda { 4 }
+        assert_equal [1, 2, 3, 4, 'Unbound Name'], b.curry[1].call(2).yield(3, &four)
+        assert_equal [1, 2, 3, 4, 'Unbound Name'], b.curry[1].===(2).(3, &four)
+        assert_equal [1, 2, 3, 4, 'Carmen'], b.curry.bind(instance).call(1)[2].yield(3, &four)
+        assert_equal [1, 2, 3, 4, 'Carmen'], b.curry.bind(instance).===(1).(2, 3, &four)
       end
 
       example '#hash' do
